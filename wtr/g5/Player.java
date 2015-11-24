@@ -78,7 +78,16 @@ public class Player implements wtr.sim.Player {
 			}
 		}
 		// try to initiate chat if previously not chatting
-		if (i == j)
+		if (i == j){
+
+			Point thisPlayer = pickTarget(players, 6, chat_ids);
+			if (thisPlayer == null) {
+				System.out.println("no valid target.");
+			} else {
+				System.out.println("thisPlayer.id" + thisPlayer.id);
+			}
+			
+
 			for (Point p : players) {
 
 				Point thisPlayer = pickTarget(players, 6, chat_ids);
@@ -107,6 +116,7 @@ public class Player implements wtr.sim.Player {
 				}
 
 			}
+		}
 		// return a random move
 		return randomMoveInRoom(self);
 	}
