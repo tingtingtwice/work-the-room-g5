@@ -30,8 +30,9 @@ public class Player implements wtr.sim.Player {
 		// initialize the wisdom array
 		int N = friend_ids.length + strangers + 2;
 		W = new int [N];
+		// initialize strangers' wisdom to 5.5 (avg wisdom for 1/3 + 1/3 + 1/3 configuration)
 		for (int i = 0 ; i != N ; ++i)
-			W[i] = i == self_id ? 0 : -1;
+			W[i] = i == self_id ? 0 : 5;
 		for (int friend_id : friend_ids){
 			friendSet.add(friend_id);
 			W[friend_id] = 50;
@@ -40,16 +41,15 @@ public class Player implements wtr.sim.Player {
 	}
 
 	// play function
-	public Point play(Point[] players, int[] chat_ids,
-	                  boolean wiser, int more_wisdom)
+	public Point play(Point[] players, int[] chat_ids, boolean wiser, int more_wisdom)
 	{
 		if(friendSet.contains(self_id))
 			System.out.println("!!!!!!!!!!!!!!!!!!!!!!!");
 		// find where you are and who you chat with
-		for(int i = 0; i < players.length; ++i) {
-			if(players[i].id != i)
-				System.out.println("ID NOT I: "+players[i].id+"\t"+i);
-		}
+		// for(int i = 0; i < players.length; ++i) {
+		// 	if(players[i].id != i)
+		// 		System.out.println("ID NOT I: "+players[i].id+"\t"+i);
+		// }
 		int i = 0, j = 0;
 		while (players[i].id != self_id) i++;
 		while (players[j].id != chat_ids[i]) j++;
@@ -62,7 +62,7 @@ public class Player implements wtr.sim.Player {
 		W[chat.id] = more_wisdom;
 		//TODO remove from blacklist
 		// attempt to continue chatting if there is more wisdom
-		System.out.println("wise: " + wiser + " selfid " + self_id + " chatid " + chat.id + " W " + W[chat.id]);
+		// System.out.println("wise: " + wiser + " selfid " + self_id + " chatid " + chat.id + " W " + W[chat.id]);
 		if(chat.id != preChatId)
 			interfereCount = 0;
 		if(!wiser && (friendSet.contains(chat.id) && W[chat.id] > 0)) {
@@ -80,8 +80,17 @@ public class Player implements wtr.sim.Player {
 		// try to initiate chat if previously not chatting
 		if (i == j)
 			for (Point p : players) {
+
+				Point thisPlayer = pickTarget(players, 6, chat_ids);
+				if (thisPlayer == null) {
+					System.out.println("no valid target.");
+				} else {
+					System.out.println("thisPlayer.id" + thisPlayer.id);
+				}
 				
-					System.out.println("pid: " + p.id + " W: " + W[p.id] + " self: " + self_id);
+				System.exit(0);
+				
+				// System.out.println("pid: " + p.id + " W: " + W[p.id] + " self: " + self_id);
 				// skip if no more wisdom to gain
 				if (W[p.id] == 0 ) continue;
 				// compute squared distance
@@ -90,12 +99,13 @@ public class Player implements wtr.sim.Player {
 				double dd = dx * dx + dy * dy;
 				// start chatting if in range
 				if (dd >= 0.25 && dd <= 4.0){
-					System.out.println("Self " + self_id + " attempt " + p.id + " W " + W[p.id]);
+					// System.out.println("Self " + self_id + " attempt " + p.id + " W " + W[p.id]);
 					if(isAlone(p.id, players, chat_ids)){
 						preChatId = p.id;
 						return new Point(0.0, 0.0, p.id);
 					}
 				}
+
 			}
 		// return a random move
 		return randomMoveInRoom(self);
@@ -106,7 +116,7 @@ public class Player implements wtr.sim.Player {
 		while(move.x + current.x > 20 || move.y + current.y > 20 || move.x + current.x < 0 || move.y + current.y < 0) {
 			move = randomMove();
 		}
-		System.out.println("Self " + self_id + " Moving");
+		// System.out.println("Self " + self_id + " Moving");
 		return move;
 	}
 	
@@ -124,5 +134,33 @@ public class Player implements wtr.sim.Player {
 		while (players[j].id != chat_ids[i]) j++;
 		return i == j;
 		
+	}
+
+	public Point pickTarget(Point[] players, double distance, int[] chat_ids){
+		int maxWisdom = 0;
+		Point maxTarget = null;
+
+		if (distance > 6.0) 
+			distance = 6.0;
+
+		for (int i = 0; i < players.length; i++){
+
+			// not conversing with anyone
+			if (players[i].id != chat_ids[i])
+				continue;
+			// swap with maxWisdom and maxTarget if wiser
+			// System.out.println("this wisdom: " + W[players[i].id]);
+			if (W[players[i].id] > maxWisdom) {
+				
+				maxWisdom = W[players[i].id];
+				maxTarget = players[i];
+			}
+			System.out.println("max wisdom: " + maxWisdom);
+		}
+
+		
+		return maxTarget;
+
+
 	}
 }
