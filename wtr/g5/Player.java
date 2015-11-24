@@ -84,12 +84,9 @@ public class Player implements wtr.sim.Player {
 		}
 		// try to initiate chat if previously not chatting
 		if (i == j){
-			//First try to find the closet one
 			Point closestTarget = pickTarget1(players, chat_ids);
-			/*It's not good to start to a conversation with the closest target, 
-			because it's wisdom is 0, or too close or in our blacklist*/
 			if (closestTarget == null) {
-				//Pick the target with the max wisdom
+
 				Point maxWisdomTarget = pickTarget2(players, 6, chat_ids);
 				if (maxWisdomTarget == null) {
 					System.out.println("no valid target.");
@@ -148,7 +145,6 @@ public class Player implements wtr.sim.Player {
 				minDis = dd;
 			}
 		}
-		//TODO make sure it's not in blacklist as well
 		if(find && minDis >= 0.25 && isAlone(targetId, players, chat_ids) && W[targetId] != 0){
 			preChatId = targetId;
 			return new Point(0.0, 0.0, targetId);
@@ -169,7 +165,6 @@ public class Player implements wtr.sim.Player {
 				continue;
 			// swap with maxWisdom and maxTarget if wiser
 			// System.out.println("this wisdom: " + W[players[i].id]);
-			//TODO make sure it's not in blacklist as well
 			if (W[players[i].id] > maxWisdom) {
 
 				maxWisdom = W[players[i].id];
@@ -188,9 +183,9 @@ public class Player implements wtr.sim.Player {
 		double dis = distance(self, target);
 		double x = (dis - targetDis) * (target.x - self.x) / dis;
 		double y = (dis - targetDis) * (target.y - self.y) / dis;
-//		System.out.println("self pos: " + self.x + ", " + self.y);
-//		System.out.println("target pos: " + target.x + ", " + target.y);
-//		System.out.println("move pos: " + x + ", " + y);
+		System.out.println("self pos: " + self.x + ", " + self.y);
+		System.out.println("target pos: " + target.x + ", " + target.y);
+		System.out.println("move pos: " + x + ", " + y);
 		return new Point(x, y, self_id);
 	}
 	public double distance(Point p1, Point p2){
