@@ -5,8 +5,6 @@ import wtr.sim.Point;
 import java.util.HashSet;
 import java.util.Random;
 
-import javax.swing.DebugGraphics;
-
 public class Player implements wtr.sim.Player {
 
 	// your own id
@@ -17,14 +15,13 @@ public class Player implements wtr.sim.Player {
 
 	// random generator
 	private Random random = new Random();
-
+	
 	private HashSet<Integer> friendSet;
-
+	
 	private int interfereThreshold = 5;
-
+	
 	private int interfereCount = 0;
 	private Integer preChatId;
-	private Point selfPlayer;
 	// init function called once
 	public void init(int id, int[] friend_ids, int strangers)
 	{
@@ -56,10 +53,8 @@ public class Player implements wtr.sim.Player {
 		int i = 0, j = 0;
 		while (players[i].id != self_id) i++;
 		while (players[j].id != chat_ids[i]) j++;
-
 		Point self = players[i];
 		Point chat = players[j];
-		selfPlayer = self;
 		//soul mate
 		if(more_wisdom > 50)
 			friendSet.add(chat.id);
@@ -86,7 +81,7 @@ public class Player implements wtr.sim.Player {
 		if (i == j){
 			Point closestTarget = pickTarget1(players, chat_ids);
 			if (closestTarget == null) {
-
+				
 				Point maxWisdomTarget = pickTarget2(players, 6, chat_ids);
 				if (maxWisdomTarget == null) {
 					System.out.println("no valid target.");
@@ -94,17 +89,21 @@ public class Player implements wtr.sim.Player {
 					return randomMoveInRoom(self);
 				} else {
 					// get closer to maxWisdomTarget
-					return getCloser(selfPlayer, maxWisdomTarget);
+					return getCloser(players[self_id], maxWisdomTarget);
 				}
 			} else {
 				return closestTarget;
 			}
 
+			
+			
+
+			
 		}
 		// return a random move
 		return randomMoveInRoom(self);
 	}
-
+	
 	public Point randomMoveInRoom(Point current) {
 		Point move = randomMove();
 		while(move.x + current.x > 20 || move.y + current.y > 20 || move.x + current.x < 0 || move.y + current.y < 0) {
@@ -113,7 +112,7 @@ public class Player implements wtr.sim.Player {
 		// System.out.println("Self " + self_id + " Moving");
 		return move;
 	}
-
+	
 	private Point randomMove(){
 		double dir = random.nextDouble() * 2 * Math.PI;
 		double dx = 6 * Math.cos(dir);
@@ -121,31 +120,29 @@ public class Player implements wtr.sim.Player {
 		preChatId = self_id;
 		return new Point(dx, dy, self_id);
 	}
-
+	
 	public boolean isAlone(Integer id, Point[] players, int[] chat_ids){
 		int i = 0, j = 0;
 		while (players[i].id != id) i++;
 		while (players[j].id != chat_ids[i]) j++;
 		return i == j;
-
+		
 	}
 	public Point pickTarget1(Point[] players, int[] chat_ids){
-		Point self = selfPlayer;
+		Point self = players[self_id];
 		double minDis = Double.MAX_VALUE;
 		int targetId = 0;
-		boolean find = false;
 		for (Point p : players) {
 			// compute squared distance
 			double dx = self.x - p.x;
 			double dy = self.y - p.y;
 			double dd = dx * dx + dy * dy;
 			if (dd >= 0.25 && dd <= 4.0 && dd < minDis){
-				find = true;
 				targetId = p.id;
 				minDis = dd;
 			}
 		}
-		if(find && isAlone(targetId, players, chat_ids) && W[targetId] != 0){
+		if(isAlone(targetId, players, chat_ids) && W[targetId] != 0){
 			preChatId = targetId;
 			return new Point(0.0, 0.0, targetId);
 		}
@@ -166,36 +163,29 @@ public class Player implements wtr.sim.Player {
 			// swap with maxWisdom and maxTarget if wiser
 			// System.out.println("this wisdom: " + W[players[i].id]);
 			if (W[players[i].id] > maxWisdom) {
-
+				
 				maxWisdom = W[players[i].id];
 				maxTarget = players[i];
 			}
-//			System.out.println("max wisdom: " + maxWisdom);
+			System.out.println("max wisdom: " + maxWisdom);
 		}
 
-
+		
 		return maxTarget;
 	}
 
 	public Point getCloser(Point self, Point target){
-		debug("get closer");
 		//can't set to 0.5, if 0.5 the result distance may be 0.49
 		double targetDis = 0.6;
 		double dis = distance(self, target);
-		double x = (dis - targetDis) * (target.x - self.x) / dis;
-		double y = (dis - targetDis) * (target.y - self.y) / dis;
-		System.out.println("self pos: " + self.x + ", " + self.y);
-		System.out.println("target pos: " + target.x + ", " + target.y);
-		System.out.println("move pos: " + x + ", " + y);
-		return new Point(x, y, self_id);
+		double x = (dis - targetDis) * (target.x - self.x) / dis + self.x;
+		double y = (dis - targetDis) * (target.y - self.y) / dis + self.y;
+		return new Point(x, y, target.id);
 	}
 	public double distance(Point p1, Point p2){
 		double dx = p1.x - p2.x;
 		double dy = p1.y - p2.y;
 		return Math.sqrt(dx * dx + dy * dy);
-	}
-	public static void debug(String str){
-		System.out.println(str);
 	}
 
 }
