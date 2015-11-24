@@ -160,7 +160,19 @@ public class Player implements wtr.sim.Player {
 
 		
 		return maxTarget;
+	}
 
-
+	public Point getCloser(Point self, Point target){
+		//can't set to 0.5, if 0.5 the result distance may be 0.49
+		double targetDis = 0.6;
+		double dis = distance(self, target);
+		double x = (dis - targetDis) * (target.x - self.x) / dis + self.x;
+		double y = (dis - targetDis) * (target.y - self.y) / dis + self.y;
+		return new Point(x, y, target.id);
+	}
+	public double distance(Point p1, Point p2){
+		double dx = p1.x - p2.x;
+		double dy = p1.y - p2.y;
+		return Math.sqrt(dx * dx + dy * dy);
 	}
 }
