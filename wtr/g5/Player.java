@@ -89,15 +89,6 @@ public class Player implements wtr.sim.Player {
 			
 
 			for (Point p : players) {
-
-				Point thisPlayer = pickTarget(players, 6, chat_ids);
-				if (thisPlayer == null) {
-					System.out.println("no valid target.");
-				} else {
-					System.out.println("thisPlayer.id" + thisPlayer.id);
-				}
-				
-				System.exit(0);
 				
 				// System.out.println("pid: " + p.id + " W: " + W[p.id] + " self: " + self_id);
 				// skip if no more wisdom to gain
@@ -146,7 +137,7 @@ public class Player implements wtr.sim.Player {
 		
 	}
 
-	public Point pickTarget(Point[] players, double distance, int[] chat_ids){
+	public Point pickTarget2(Point[] players, double distance, int[] chat_ids){
 		int maxWisdom = 0;
 		Point maxTarget = null;
 
@@ -184,5 +175,25 @@ public class Player implements wtr.sim.Player {
 		double dx = p1.x - p2.x;
 		double dy = p1.y - p2.y;
 		return Math.sqrt(dx * dx + dy * dy);
+	}
+	public Point pickTarget(Point[] players, int[] chat_ids){
+		Point self = players[self_id];
+		double minDis = Double.MAX_VALUE;
+		int targetId = 0;
+		for (Point p : players) {
+			// compute squared distance
+			double dx = self.x - p.x;
+			double dy = self.y - p.y;
+			double dd = dx * dx + dy * dy;
+			if (dd >= 0.25 && dd <= 4.0 && dd < minDis){
+				targetId = p.id;
+				minDis = dd;
+			}
+		}
+		if(isAlone(targetId, players, chat_ids) && W[targetId] != 0){
+			preChatId = targetId;
+			return new Point(0.0, 0.0, targetId);
+		}
+		return null;
 	}
 }
