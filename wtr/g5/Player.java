@@ -46,6 +46,10 @@ public class Player implements wtr.sim.Player {
 		if(friendSet.contains(self_id))
 			System.out.println("!!!!!!!!!!!!!!!!!!!!!!!");
 		// find where you are and who you chat with
+		for(int i = 0; i < players.length; ++i) {
+			if(players[i].id != i)
+				System.out.println("ID NOT I: "+players[i].id+"\t"+i);
+		}
 		int i = 0, j = 0;
 		while (players[i].id != self_id) i++;
 		while (players[j].id != chat_ids[i]) j++;
@@ -67,7 +71,7 @@ public class Player implements wtr.sim.Player {
 		if (wiser || (friendSet.contains(chat.id) && W[chat.id] > 0)) {
 			if(!wiser && interfereCount >= interfereThreshold){
 				//If two friends has been interfered more than 5 times, then move away
-				return randomMove(preChatId);
+				return randomMoveInRoom(self);
 			}else{
 				preChatId = chat.id;
 				return new Point(0.0, 0.0, chat.id);
@@ -94,16 +98,26 @@ public class Player implements wtr.sim.Player {
 				}
 			}
 		// return a random move
-		return randomMove(preChatId);
+		return randomMoveInRoom(self);
 	}
-	public Point randomMove(Integer preChatId){
+	
+	public Point randomMoveInRoom(Point current) {
+		Point move = randomMove();
+		while(move.x + current.x > 20 || move.y + current.y > 20 || move.x + current.x < 0 || move.y + current.y < 0) {
+			move = randomMove();
+		}
+		System.out.println("Self " + self_id + " Moving");
+		return move;
+	}
+	
+	private Point randomMove(){
 		double dir = random.nextDouble() * 2 * Math.PI;
 		double dx = 6 * Math.cos(dir);
 		double dy = 6 * Math.sin(dir);
-		System.out.println("Self " + self_id + " Moving");
 		preChatId = self_id;
 		return new Point(dx, dy, self_id);
 	}
+	
 	public boolean isAlone(Integer id, Point[] players, int[] chat_ids){
 		int i = 0, j = 0;
 		while (players[i].id != id) i++;
