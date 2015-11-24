@@ -139,13 +139,13 @@ public class Player implements wtr.sim.Player {
 			double dx = self.x - p.x;
 			double dy = self.y - p.y;
 			double dd = dx * dx + dy * dy;
-			if (dd <= 4.0 && dd < minDis){
+			if (dd >= 0.25 && dd <= 4.0 && dd < minDis){
 				find = true;
 				targetId = p.id;
 				minDis = dd;
 			}
 		}
-		if(find && minDis >= 0.25 && isAlone(targetId, players, chat_ids) && W[targetId] != 0){
+		if(find && isAlone(targetId, players, chat_ids) && W[targetId] != 0){
 			preChatId = targetId;
 			return new Point(0.0, 0.0, targetId);
 		}
@@ -178,6 +178,7 @@ public class Player implements wtr.sim.Player {
 	}
 
 	public Point getCloser(Point self, Point target){
+		debug("get closer");
 		//can't set to 0.5, if 0.5 the result distance may be 0.49
 		double targetDis = 0.6;
 		double dis = distance(self, target);
