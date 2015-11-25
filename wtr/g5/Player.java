@@ -34,8 +34,10 @@ public class Player implements wtr.sim.Player {
 		int N = friend_ids.length + strangers + 2;
 		W = new int [N];
 		// initialize strangers' wisdom to 5.5 (avg wisdom for 1/3 + 1/3 + 1/3 configuration)
+		int stranger_wisdom = (int) (5.5*strangers + 200)/(strangers+1);
+		debug("strangerWisdom: "+stranger_wisdom);
 		for (int i = 0 ; i != N ; ++i)
-			W[i] = i == self_id ? 0 : 5;
+			W[i] = i == self_id ? 0 : 50;
 		for (int friend_id : friend_ids){
 			friendSet.add(friend_id);
 			W[friend_id] = 50;
@@ -59,6 +61,7 @@ public class Player implements wtr.sim.Player {
 
 		Point self = players[i];
 		Point chat = players[j];
+		
 		selfPlayer = self;
 		//soul mate
 		if(more_wisdom > 50)
@@ -76,9 +79,17 @@ public class Player implements wtr.sim.Player {
 		if (wiser || (friendSet.contains(chat.id) && W[chat.id] > 0)) {
 			if(!wiser && interfereCount >= interfereThreshold){
 				//If two friends has been interfered more than 5 times, then move away
+				System.out.println("RANDMOVE");
 				return randomMoveInRoom(self);
 			}else{
 				preChatId = chat.id;
+				System.out.println("DIST: "+distance(self, chat));
+				if(distance(self, chat) > 0.6) {
+//					debug("GENNING");
+					Point ret = getCloserWithID(self, chat, self.id);
+					return ret;
+				}
+				System.out.println("CONTINUE CHAT");
 				return new Point(0.0, 0.0, chat.id);
 			}
 		}
@@ -94,9 +105,11 @@ public class Player implements wtr.sim.Player {
 					return randomMoveInRoom(self);
 				} else {
 					// get closer to maxWisdomTarget
+					System.out.println("GET CLOSER");
 					return getCloser(selfPlayer, maxWisdomTarget);
 				}
 			} else {
+				System.out.println("CHATCLOSEST");
 				return closestTarget;
 			}
 
@@ -135,10 +148,14 @@ public class Player implements wtr.sim.Player {
 		int targetId = 0;
 		boolean find = false;
 		for (Point p : players) {
+			if(p.id == self.id)
+				continue;
 			// compute squared distance
 			double dx = self.x - p.x;
 			double dy = self.y - p.y;
 			double dd = dx * dx + dy * dy;
+			if(dd < .25)
+				return null;
 			if (dd >= 0.25 && dd <= 4.0 && dd < minDis){
 				find = true;
 				targetId = p.id;
@@ -180,7 +197,7 @@ public class Player implements wtr.sim.Player {
 	public Point getCloser(Point self, Point target){
 		debug("get closer");
 		//can't set to 0.5, if 0.5 the result distance may be 0.49
-		double targetDis = 0.6;
+		double targetDis = 0.52;
 		double dis = distance(self, target);
 		double x = (dis - targetDis) * (target.x - self.x) / dis;
 		double y = (dis - targetDis) * (target.y - self.y) / dis;
@@ -189,6 +206,15 @@ public class Player implements wtr.sim.Player {
 		System.out.println("move pos: " + x + ", " + y);
 		return new Point(x, y, self_id);
 	}
+	
+	public Point getCloserWithID(Point self, Point target, int id) {
+		double targetDis = 0.6;
+		double dis = distance(self, target);
+		double x = (dis - targetDis) * (target.x - self.x) / dis;
+		double y = (dis - targetDis) * (target.y - self.y) / dis;
+		return new Point(x, y, id);
+	}
+	
 	public double distance(Point p1, Point p2){
 		double dx = p1.x - p2.x;
 		double dy = p1.y - p2.y;
