@@ -35,9 +35,9 @@ public class Player implements wtr.sim.Player {
 		W = new int [N];
 		// initialize strangers' wisdom to 5.5 (avg wisdom for 1/3 + 1/3 + 1/3 configuration)
 		int stranger_wisdom = (int) (5.5*strangers + 200)/(strangers+1);
-		debug("strangerWisdom: "+stranger_wisdom);
+		// debug("strangerWisdom: "+stranger_wisdom);
 		for (int i = 0 ; i != N ; ++i)
-			W[i] = i == self_id ? 0 : 50;
+			W[i] = i == self_id ? 0 : stranger_wisdom;
 		for (int friend_id : friend_ids){
 			friendSet.add(friend_id);
 			W[friend_id] = 50;

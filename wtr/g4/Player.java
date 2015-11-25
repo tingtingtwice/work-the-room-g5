@@ -3,6 +3,7 @@ package wtr.g4;
 import wtr.sim.Point;
 
 import java.util.Random;
+import java.util.*;
 
 import java.lang.Math;
 
@@ -17,6 +18,14 @@ public class Player implements wtr.sim.Player {
 	// random generator
 	private Random random = new Random();
 
+	// friends
+	int[] friends;
+
+	ArrayList<ArrayList<Point>> priority = new ArrayList<>();
+
+	// number of times failed initiating the talk
+	private int fails = 0;
+
 	// init function called once
 	public void init(int id, int[] friend_ids, int strangers)
 	{
@@ -28,6 +37,8 @@ public class Player implements wtr.sim.Player {
 			W[i] = i == self_id ? 0 : -1;
 		for (int friend_id : friend_ids)
 			W[friend_id] = 50;
+		friends = friend_ids;
+		int nStrangers = strangers;
 	}
 
 	//decide where to move
@@ -87,6 +98,19 @@ public class Player implements wtr.sim.Player {
 		//return new Point(self.x, self.y, self.id);
 	}
 
+	public class PlayerComparator implements Comparator<Point> {
+		/**
+		 * compare players by wisdom left
+		 * expected wisdom of strangers are 12
+		 */
+		public int compare(Point p1, Point p2) {
+			int s1 = W[p1.id] >= 0 ? W[p1.id] : 12;
+			int s2 = W[p2.id] >= 0 ? W[p2.id] : 12;
+
+			return s2 - s1;
+		}
+	}
+
 	// play function
 	public Point play(Point[] players, int[] chat_ids,
 			boolean wiser, int more_wisdom)
@@ -97,26 +121,89 @@ public class Player implements wtr.sim.Player {
 		while (players[j].id != chat_ids[i]) j++;
 		Point self = players[i];
 		Point chat = players[j];
+
 		// record known wisdom
 		W[chat.id] = more_wisdom;
+
 		// attempt to continue chatting if there is more wisdom
 		if (wiser) {
 			return new Point(0.0, 0.0, chat.id);
 		}
+
+		// if (i != j && !wiser) {
+		// 	System.err.println("out of wisdom for this player " + chat.id);
+		// }
+
 		// try to initiate chat if previously not chatting
 		if (i == j) {
-			for (Point p : players) {
+			priority.clear();
+			priority.add(new ArrayList<Point>());
+			priority.add(new ArrayList<Point>());
+
+			for (int index = 0; index < players.length; index++) {
+				Point p = players[index];
+				int chattedByP = chat_ids[index];
+
 				// skip if no more wisdom to gain
 				if (W[p.id] == 0) continue;
+
 				// compute squared distance
 				double dx = self.x - p.x;
 				double dy = self.y - p.y;
 				double dd = dx * dx + dy * dy;
+
+				// put qualified players into priority
+				if (p.id == chattedByP) {
+					if (dd >= 0.25 && dd <= 4.0) {
+						priority.get(0).add(p);  // available, within talking distance
+					}
+				} else {
+					priority.get(1).add(p);  // within range
+				}
+
+				if (W[p.id] > 50) {  // soulmate
+					if (dd >= 0.25 && dd <= 4.0) {
+						priority.get(0).add(p);
+					} else {
+						priority.get(1).add(p);
+					}
+				}
+
 				// start chatting if in range
-				if (dd >= 0.25 && dd <= 4.0)
+				// if (self_id != 0 && dd >= 0.25 && dd <= 4.0)
+				// 	return new Point(0.0, 0.0, p.id);
+			}
+
+			ArrayList<Point> myList = priority.get(0);
+			Collections.sort(myList, new PlayerComparator());
+
+			// get the player with highest wisdom
+			for (Point p : myList) {
+				if (fails < 3) {
+					fails++;
+					// if (self_id == 15)
+						// System.err.println(self_id + " list0, talking to " + p.id + " wisdom " + W[p.id]);
 					return new Point(0.0, 0.0, p.id);
+				}
+			}
+			fails = 0;
+
+			myList = priority.get(1);
+			if (!myList.isEmpty()) {
+				Collections.sort(myList, new PlayerComparator());
+				Point p = myList.get(0);
+
+				// compute squared distance
+				double dx = p.x - self.x;
+				double dy = p.y - self.y;
+				double dd = dx * dx + dy * dy;
+
+				// get close to the player
+				// System.err.println(self_id + " list1, talking to " + p.id + " wisdom " + W[p.id]);
+				return new Point(0.8 * dx, 0.8 * dy, self_id);
 			}
 		}
+
 		return move(players, chat_ids, self);
 	}
 }
