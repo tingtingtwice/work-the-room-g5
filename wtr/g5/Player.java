@@ -25,6 +25,10 @@ public class Player implements wtr.sim.Player {
 	private int interfereCount = 0;
 	private Integer preChatId;
 	private Point selfPlayer;
+	private HashSet<Integer> alreadyTalkedStrangers;
+	private Double strangerUnknowWisdom;
+	private Integer numberOfStrangers;
+	private Integer totalNumber;
 	// init function called once
 	public void init(int id, int[] friend_ids, int strangers)
 	{
@@ -32,6 +36,7 @@ public class Player implements wtr.sim.Player {
 		friendSet = new HashSet<Integer>();
 		// initialize the wisdom array
 		int N = friend_ids.length + strangers + 2;
+		totalNumber = N;
 		W = new int [N];
 		// initialize strangers' wisdom to 5.5 (avg wisdom for 1/3 + 1/3 + 1/3 configuration)
 		int stranger_wisdom = (int) (5.5*strangers + 200)/(strangers+1);
@@ -43,13 +48,23 @@ public class Player implements wtr.sim.Player {
 			W[friend_id] = 50;
 		}
 		preChatId = self_id;
+		alreadyTalkedStrangers = new HashSet<Integer>();
+		strangerUnknowWisdom = strangers * 5.5 + 200;
+		numberOfStrangers = strangers + 1;
+	}
+	public void updateStrangerWisdom(){
+		
+		int cur_stranger_wisdom = (int) (strangerUnknowWisdom / numberOfStrangers);
+		for(int i = 0; i < totalNumber; i++){
+			if(friendSet.contains(i) || alreadyTalkedStrangers.contains(i) || i == self_id)
+				continue;
+			W[i] = cur_stranger_wisdom;
+		}
 	}
 
 	// play function
 	public Point play(Point[] players, int[] chat_ids, boolean wiser, int more_wisdom)
 	{
-		if(friendSet.contains(self_id))
-			System.out.println("!!!!!!!!!!!!!!!!!!!!!!!");
 		// find where you are and who you chat with
 		// for(int i = 0; i < players.length; ++i) {
 		// 	if(players[i].id != i)
@@ -64,13 +79,22 @@ public class Player implements wtr.sim.Player {
 		
 		selfPlayer = self;
 		//soul mate
-		if(more_wisdom > 50)
+		if(more_wisdom > 50 && !friendSet.contains(chat.id)){
+			alreadyTalkedStrangers.add(chat.id);
 			friendSet.add(chat.id);
+			strangerUnknowWisdom -= 200;	
+		}else if(chat.id != self_id && !friendSet.contains(chat.id) && !alreadyTalkedStrangers.contains(chat.id)){
+			alreadyTalkedStrangers.add(chat.id);
+			strangerUnknowWisdom -= more_wisdom;
+		}
+		
 		// record known wisdom
 		W[chat.id] = more_wisdom;
 		//TODO remove from blacklist
 		// attempt to continue chatting if there is more wisdom
 		// System.out.println("wise: " + wiser + " selfid " + self_id + " chatid " + chat.id + " W " + W[chat.id]);
+		updateStrangerWisdom();
+		
 		if(chat.id != preChatId)
 			interfereCount = 0;
 		if(!wiser && (friendSet.contains(chat.id) && W[chat.id] > 0)) {
