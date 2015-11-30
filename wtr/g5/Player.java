@@ -83,6 +83,7 @@ public class Player implements wtr.sim.Player {
 		if(more_wisdom > 50 && !friendSet.contains(chat.id) && soulmateID < 0){
 			alreadyTalkedStrangers.add(chat.id);
 			soulmateID = chat.id;
+			friendSet.add(chat.id);
 			// Keep track of soulmate, so you only subtract the 200 one time.
 			strangerUnknowWisdom -= 200;	
 		}else if(chat.id != self_id && !friendSet.contains(chat.id) && !alreadyTalkedStrangers.contains(chat.id)){
