@@ -1,7 +1,8 @@
 package wtr.g1;
 
 import wtr.sim.Point;
-
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
@@ -16,7 +17,7 @@ public class Player implements wtr.sim.Player {
 	private int self_id = -1;
 
 	private int soulmate = -1;
-
+	private ClusterPoint closestCluster;
 	//time counter 
 	int time=0;
 	// the remaining wisdom per player
@@ -50,7 +51,6 @@ public class Player implements wtr.sim.Player {
 		nearby_strangers = new ArrayList<Point>();
 		available_friends = new ArrayList<Point>();
 		available_strangers = new ArrayList<Point>();
-
 		// initialize the wisdom array
 		int N = friend_ids.length + strangers + 2;
 		
@@ -119,20 +119,54 @@ public class Player implements wtr.sim.Player {
 	                  boolean wiser, int more_wisdom)
 	{
 		time=time+1;
-		 
 		// find where you are and who you chat with
 		int i = 0, j = 0;
 		while (players[i].id != self_id) i++;
 		while (players[j].id != chat_ids[i]) j++;
 		Point self = players[i];
 		Point chat = players[j];
+		KMeans kmeans = new KMeans(3, players, self);
+		double mindistance = Double.MAX_VALUE;
+		HashMap<Double, ClusterPoint> distMap = new HashMap<Double, ClusterPoint>();
+		ArrayList<Double> distances = new ArrayList<Double>();
+		for(Cluster cluster: kmeans.clusters)
+		{
+			ClusterPoint cur_centroid = cluster.getCentroid();
+			double dist = ClusterPoint.distance(cur_centroid, new ClusterPoint(self.x, self.y, self.id));
+			distances.add(dist);
+			distMap.put(dist, new ClusterPoint(cur_centroid.getX(), cur_centroid.getY(), cluster.id));
+			if (dist < mindistance)
+			{
+				mindistance = dist;
+				closestCluster = new ClusterPoint(cur_centroid.getX(), cur_centroid.getY(), cluster.id);
+			}
+		}
+		ClusterPoint distToClosestPoint;
+		// ClusterPoint midPoint;
+		// Collections.sort(distances);
+		// if(distances.size() >=2)
+		// {
+		// 	ClusterPoint closestCluster1 = distMap.get(distances.get(0));
+		// 	ClusterPoint closestCluster2 = distMap.get(distances.get(1));
+		// 	midPoint = ClusterPoint.getMidPoint(closestCluster1, closestCluster2);
+		// 	distToClosestPoint = new ClusterPoint(midPoint.x - self.x, midPoint.y - self.y, self.id);
+		// }
+		// else
+		// {
+		// 	distToClosestPoint = new ClusterPoint(0, 0, self.id);
+		// 	midPoint = new ClusterPoint(self.x, self.y, self.id);
+		// }
+
+		distToClosestPoint = new ClusterPoint(closestCluster.x - self.x, closestCluster.y - self.y, self.id);
 
 		// record known wisdom
 		W[chat.id] = more_wisdom;
 
 		// attempt to continue chatting if there is more wisdom
-		if (wiser) {
-			if(!ignorePlayer(chat.id)){
+		if (wiser) 
+		{
+			if(!ignorePlayer(chat.id))
+			{
 				return getReturnPoint(0.0, 0.0, chat.id);
 			}
 		}
@@ -182,7 +216,7 @@ public class Player implements wtr.sim.Player {
 					double dd = dx * dx + dy * dy;
 					// start chatting if in range, else move to SM
 					if (dd >= 0.25 && dd <= 4.0) {
-						return getReturnPoint(0.0, 0.0, p.id);
+						return getReturnPoint(0.0,0.0, p.id);
 					} /*else {
 						return getReturnPoint(dx/1.2, dy/1.2, self_id);
 					}*/
@@ -229,9 +263,11 @@ public class Player implements wtr.sim.Player {
 		}
 
 		// find a friend out of distance, go to that friend
-		for (Point p : nearby_friends) {
+		for (Point p : nearby_friends) 
+		{
 				// skip if no more wisdom to gain
-				if (W[p.id] == 0) {
+				if (W[p.id] == 0) 
+				{
 					continue;
 				}
 				// compute squared distance
@@ -239,17 +275,31 @@ public class Player implements wtr.sim.Player {
 				double dy = p.y - self.y;
 				double dd = dx * dx + dy * dy;
 				// start chatting if in range
-				if (dd < 4) {
+				if (dd>= 0.25 && dd <= 4.0) 
+				{
 					//TODO: check if we should have self_id here or p.id and less then 4 or > 4?
 					if(!ignorePlayer(p.id))
 						return getReturnPoint(dx/1.2, dy/1.2, p.id);
 				}
-			}
+		}
 
-		// return a random move
+
+		// System.out.println("GOING TO MOST CONCENTRATED AREA");
 		double dir = random.nextDouble() * 2 * Math.PI;
-		double dx = 6 * Math.cos(dir);
-		double dy = 6 * Math.sin(dir);
+		double jump = 6;
+		double dx = jump * distToClosestPoint.unit().x;
+		double dy = jump * distToClosestPoint.unit().y;
+		if((dy + self.y > 19 || dx + self.x > 19) && jump >1)
+		{
+			jump-= 0.1;
+			dx = jump * distToClosestPoint.unit().x;
+			dy = jump * distToClosestPoint.unit().y;
+		}
+		if (jump == 1)
+		{
+			System.out.println("NO MORE MOVES");
+		}
 		return getReturnPoint(dx, dy, self_id);
+		// return getReturnPoint(distToClosestPoint.x, distToClosestPoint.y, self_id);
 	}
 }

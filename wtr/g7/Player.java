@@ -2,6 +2,8 @@ package wtr.g7;
 
 import wtr.sim.Point;
 
+import java.util.Comparator;
+import java.util.PriorityQueue;
 import java.util.Random;
 
 public class Player implements wtr.sim.Player {
@@ -11,7 +13,8 @@ public class Player implements wtr.sim.Player {
 
 	// the remaining wisdom per player
 	private int[] W = null;
-
+	private int totalWisdom = 0;
+	private int wait_time = 0;
 	// random generator
 	private Random random = new Random();
 
@@ -26,6 +29,7 @@ public class Player implements wtr.sim.Player {
 			W[i] = i == self_id ? 0 : -1;
 		for (int friend_id : friend_ids)
 			W[friend_id] = 50;
+		totalWisdom = friend_ids.length * 50 + 200 + 10 * strangers;
 	}
 
 	// play function
@@ -40,6 +44,15 @@ public class Player implements wtr.sim.Player {
 		Point chat = players[j];
 		// record known wisdom
 		W[chat.id] = more_wisdom;
+		
+		// attempt to keep talking
+		if (!wiser && i != j)
+			wait_time ++;
+		else
+			wait_time = 0;
+		if (wait_time <= more_wisdom / 5 && i != j)
+			return new Point(0,0,chat.id);
+		
 		// attempt to chat with the closet one if you're the closet one to him, too
 		Point closetPerson = null;
 		double distToPersonWithNowisdom = Double.MAX_VALUE;
@@ -88,7 +101,55 @@ public class Player implements wtr.sim.Player {
 //			return moveToTheCrowdedZone(players, self);
 		// move to the person who is far away from others
 //		else
-			return moveToThePersonAlone(players, self);
+			return newMoveFunction(players, self);
+//			return moveToThePersonAlone(players, self);
+	}
+	// Move to the person with the most wisdom and away from others
+	private Point newMoveFunction(Point[] players, Point self) {
+		double dir = random.nextDouble() * 2 * Math.PI;
+		double dx = 6 * Math.cos(dir);
+		double dy = 6 * Math.sin(dir);
+		Point position = new Point(dx, dy, self_id);
+		
+        // find all valid cuts
+		PriorityQueue<Point> candidateTomove = new PriorityQueue<Point>(
+				new Comparator<Point>()
+                {
+                    public int compare( Point x, Point y )
+                    {
+                    	return (W[y.id] - W[x.id]);
+                    }
+                });		
+		int i,j;
+		for (i = 0; i < players.length; i ++) {
+			if (W[players[i].id] == 0) continue;
+			dx = players[i].x - self.x;
+			dy = players[i].y - self.y;
+			
+			double minDistance = Double.MAX_VALUE;
+			for (j = 0; j < players.length; j ++) {
+				if (players[j].id ==self_id || i == j) continue;
+				dx = players[i].x - players[j].x;
+				dy = players[i].y - players[j].y;
+				double dd = Math.sqrt(dx * dx + dy * dy);
+				if (dd < minDistance)
+					minDistance = dd;
+			}
+			if (minDistance > 2.0)
+				candidateTomove.offer(players[i]);
+		}
+		double expectedDistance;
+		if (candidateTomove.size() == 0)
+			return position;
+		else 
+			expectedDistance = 0.6;
+		dx = candidateTomove.peek().x - self.x;
+		dy = candidateTomove.peek().y - self.y;
+		double distanceTotarget = Math.sqrt(dx * dx + dy * dy);
+		position = new Point( dx * (distanceTotarget - expectedDistance) / distanceTotarget,
+				dy * (distanceTotarget - expectedDistance) / distanceTotarget, self_id);
+//		System.out.println("my ID: " + self_id+ "\n"+ "my move: (" +position.x+","+position.y+")");
+		return position;
 	}
 	
 	private Point moveToThePersonAlone(Point[] players, Point self) {
@@ -132,7 +193,7 @@ public class Player implements wtr.sim.Player {
 		if (!find_target && max < 2)
 			return position;
 		else 
-			expectedDistance = 2.0;
+			expectedDistance = 1.0;
 		dx = players[target].x - self.x;
 		dy = players[target].y - self.y;
 		double distanceTotarget = Math.sqrt(dx * dx + dy * dy);

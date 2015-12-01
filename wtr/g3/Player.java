@@ -2,182 +2,183 @@ package wtr.g3;
 
 import wtr.sim.Point;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Random;
 
 public class Player implements wtr.sim.Player {
 
-    public static final int MAX_RETRIES = 5;
+  public static final int NONE = -1;
+  public static final double MIN_DISTANCE = 1.0;
+  public static final double TARGET_DISTANCE = 0.55;
 
-    // your own id
-    private int self_id = -1;
+  public int population;
+
+  // your own id
+  private int self_id = NONE;
+
+  // player we don't want to talk to right now due to interruptions
+  private int illegal = NONE;
+
+  // last chat id
+  private int lastChat = NONE;
+
+  private int turnsWaited = 0;
+
+  private HashMap<Integer, PlayerStats> stats;
+
+  // random generator
+  private Random random = new Random();
+
+  // init function called once
+  public void init(int id, int[] friend_ids, int strangers) {
+    population = 2 + friend_ids.length + strangers;
+    self_id = id;
+    // initialize the wisdom array
+    stats = new HashMap<>();
+
+    for (int friend_id : friend_ids) {
+      stats.put(friend_id, new PlayerStats(friend_id, 50));
+    }
+  }
+
+  // play function
+  public Point play(Point[] players, int[] chat_ids,
+      boolean wiser, int more_wisdom) {
+    // find where you are and who you chat with
+    int i = 0, j = 0;
+    while (players[i].id != self_id) i++;
+    while (players[j].id != chat_ids[i]) j++;
+    Point self = players[i];
+    Point chat = players[j];
+    illegal = NONE;
 
 
-    // the remaining wisdom per player
-    private int[] wisdom = null;
-
-    // random generator
-    private Random random = new Random();
-
-    // previous move
-    Point prevMove = null;
-    int numberOfRetries = 0;
-
-    // init function called once
-    public void init(int id, int[] friend_ids, int strangers) {
-        self_id = id;
-        // initialize the wisdom array
-        int N = friend_ids.length + strangers + 2;
-        wisdom = new int[N];
-        for (int i = 0; i != N; ++i)
-            wisdom[i] = i == self_id ? 0 : -1;
-        for (int friend_id : friend_ids)
-            wisdom[friend_id] = 50;
+    if (!stats.containsKey(chat.id)) {
+      stats.put(chat.id, new PlayerStats(chat.id, more_wisdom));
+    } else {
+      stats.get(chat.id).setWisdomRemaining(more_wisdom);
     }
 
-    // play function
-    public Point play(Point[] players, int[] chat_ids,
-                      boolean wiser, int more_wisdom) {
-        // find where you are and who you chat with
-        int i = 0, j = 0;
-        while (players[i].id != self_id) i++;
-        while (players[j].id != chat_ids[i]) j++;
-        Point self = players[i];
-        Point chat = players[j];
+    if (chat.id != lastChat) {
+      turnsWaited = 0;
+    }
 
-        // record known wisdom
-        wisdom[chat.id] = more_wisdom;
+    if (!wiser && stats.get(chat.id).hasWisdom()) {
+      if (++turnsWaited > waitTime(chat.id)) {
+        illegal = chat.id;
+      }
+    }
 
-        // attempt to continue chatting if there is more wisdom
-        if (wiser) {
-            return new Point(0.0, 0.0, chat.id);
+    if (wiser) {
+      lastChat = chat.id;
+      if (distance(self, chat) > MIN_DISTANCE) {
+        return getCloserWithID(self, chat, self.id);
+      }
+
+      return new Point(0.0, 0.0, chat.id);
+    }
+
+    if (i == j || illegal >= 0) {
+      Point closestTarget = pickClosestTarget(players, self);
+
+      if (closestTarget != null) {
+        return closestTarget;
+      }
+
+      Point maxWisdomTarget = pickTargetWithMaximumRemainingWisdom(players, chat_ids);
+      if (maxWisdomTarget != null) {
+        if(distance(self, maxWisdomTarget) < MIN_DISTANCE) {
+          return maxWisdomTarget;
+        } else {
+          return getCloserWithID(self, maxWisdomTarget, self.id);
         }
-
-        if (prevMove != null && numberOfRetries < MAX_RETRIES) {
-            if (playerIsWithinTalkingDistance(prevMove.id, players, self)) {
-                numberOfRetries++;
-                return prevMove;
-            }
-        }
-
-        prevMove = null;
-        numberOfRetries = 0;
-        if (i == j) {
-            Arrays.sort(players, new Comparator<Point>() {
-                @Override
-                public int compare(Point player1, Point player2) {
-                    double player1distance = squareDistance(player1, self);
-                    double player2distance = squareDistance(player2, self);
-
-                    return player1distance < player2distance ? -1 : 1;
-                }
-            });
-            for(Point p : players){
-                if(wisdom[p.id] != 0 && isWithinTalkingDitance(squareDistance(self, p))){
-                    numberOfRetries = 0;
-                    prevMove = new Point(0.0, 0.0, p.id);
-                    return prevMove;
-                }
-            }
-        }
-        // return a random move
-        double dir = random.nextDouble() * 2 * Math.PI;
-        double dx = 6 * Math.cos(dir);
-        double dy = 6 * Math.sin(dir);
-        prevMove = null;
-        return new Point(dx, dy, self_id);
+      }
 
     }
+    // return a random move
+    return randomMove();
+  }
 
-    public ArrayList<Point> sortPlayers(Point[] players, Point self) {
-        ArrayList<Point> playersWithWisdom = new ArrayList<>();
-        for (Point p : players) {
-            if (wisdom[p.id] != 0) {
-                playersWithWisdom.add(p);
-            }
-        }
+  public Point pickClosestTarget(Point[] players, Point self) {
 
-        Collections.sort(playersWithWisdom, new Comparator<Point>() {
-            @Override
-            public int compare(Point player1, Point player2) {
-                double player1distance = squareDistance(player1, self);
-                double player2distance = squareDistance(player2, self);
+    double minDist = Double.MAX_VALUE;
+    int targetId = NONE;
 
-                return player1distance < player2distance ? -1 : 1;
-            }
-        });
+    for (Point p : players) {
+      if (p.id == self.id || p.id == illegal)
+        continue;
 
-        return playersWithWisdom;
-        /*Arrays.sort(players, new Comparator<Point>() {
-            @Override
-            public int compare(Point p1, Point p2) {
-                if(p1 == self) return 1;
-                if(p2 == self) return -1;
-
-                if(wisdom[p1.id] == 0 && wisdom[p2.id] == 0){
-                    return 0;
-                } else if(wisdom[p1.id] == 0 && wisdom[p2.id] != 0){
-                    return 1;
-                } else if(wisdom[p1.id] != 0 && wisdom[p2.id] == 0){
-                    return -1;
-                }
-
-                double p1dist = squareDistance(self, p1);
-                double p2dist = squareDistance(self, p2);
-
-                if(isWithinTalkingDitance(p1dist) && !isWithinTalkingDitance(p2dist)){
-                    return -1;
-                } else if(!isWithinTalkingDitance(p1dist) && isWithinTalkingDitance(p2dist)){
-                    return 1;
-                } else if (!isWithinTalkingDitance(p1dist) && !isWithinTalkingDitance(p2dist)){
-                    return 0;
-                }
-
-                if(wisdom[p1.id] == -1 && wisdom[p1.id] != -1){
-                    return -1;
-                } else if(wisdom[p1.id] != -1 && wisdom[p2.id] == -1){
-                    return 1;
-                } else {
-                    return wisdom[p1.id] - wisdom[p2.id];
-                }
-
-            }
-        });*/
+      // compute squared distance
+      double dx = self.x - p.x;
+      double dy = self.y - p.y;
+      double dd = dx * dx + dy * dy;
+      if(dd < 0.25 && dd > 0){
+        return null;
+      }
+      if (dd >= 0.25 && dd <= 4.0 && dd < minDist) {
+        targetId = p.id;
+        minDist = dd;
+      }
+    }
+    if (targetId != NONE && playerHasWisdom(targetId)) {
+      lastChat = targetId;
+      return new Point(0.0, 0.0, targetId);
     }
 
-    public boolean playerIsWithinTalkingDistance(int id, Point[] players, Point self) {
-        for (Point player : players) {
-            if (player.id == id && isWithinTalkingDitance(squareDistance(self, player)))
-                return true;
-        }
-        return false;
+    return null;
+  }
+
+  public Point pickTargetWithMaximumRemainingWisdom(Point[] players, int[] chat_ids) {
+
+    int maxWisdom = 0;
+    Point target = null;
+
+    for (int i = 0; i < players.length; i++) {
+      if (players[i].id != chat_ids[i] || players[i].id == illegal)
+        continue;
+
+      if (stats.containsKey(players[i].id) && stats.get(players[i].id).wisdomRemaining > maxWisdom) {
+        maxWisdom = stats.get(players[i].id).wisdomRemaining;
+        target = players[i];
+      }
     }
 
-    public boolean isWithinTalkingDitance(double distance) {
-        return distance >= 0.25 && distance <= 4.0;
-    }
 
-    public double computeAverageWisdom(int[] wisdoms) {
-        int total = 0;
-        int denom = 0;
-        for (int wisdom : wisdoms) {
-            if (wisdom > 0) {
-                total += wisdom;
-                denom++;
-            }
-        }
+    return target;
+  }
 
-        return denom > 0 ? total / denom : 0;
-    }
+  public boolean playerHasWisdom(int playerID) {
+    return !stats.containsKey(playerID) ||
+      (stats.containsKey(playerID) && stats.get(playerID).hasWisdom());
+  }
 
-    public double distance(Point a, Point b) {
-        return Math.sqrt(squareDistance(a, b));
-    }
+  public Point randomMove() {
+    // return a random move
+    double dir = random.nextDouble() * 2 * Math.PI;
+    double dx = 6 * Math.cos(dir);
+    double dy = 6 * Math.sin(dir);
+    return new Point(dx, dy, self_id);
+  }
 
-    public double squareDistance(Point a, Point b) {
-        return (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y);
-    }
+  public Point getCloserWithID(Point self, Point target, int id) {
+    double targetDis = TARGET_DISTANCE;
+    double dis = distance(self, target);
+    double x = (dis - targetDis) * (target.x - self.x) / dis;
+    double y = (dis - targetDis) * (target.y - self.y) / dis;
+    return new Point(x, y, id);
+  }
 
-    public double angle(Point origin, Point target) {
-        return Math.atan2(target.y - origin.y, target.x - origin.x);
+  public double distance(Point p1, Point p2) {
+    double dx = p1.x - p2.x;
+    double dy = p1.y - p2.y;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  public int waitTime(int id) {
+    if (population >= 100 && stats.get(id).wisdomRemaining <= 50) {
+      return 0;
+    } else { 
+      return stats.get(id).wisdomRemaining / (int) Math.sqrt(population) * 2;
     }
+  }
 }
