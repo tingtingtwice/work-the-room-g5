@@ -105,7 +105,7 @@ public class Player implements wtr.sim.Player {
 		W[chat.id] = more_wisdom;
 		//TODO remove from blacklist
 		// attempt to continue chatting if there is more wisdom
-		// System.out.println("wise: " + wiser + " selfid " + self_id + " chatid " + chat.id + " W " + W[chat.id]);
+		 System.out.println("wise: " + wiser + " selfid " + self_id + " chatid " + chat.id + " W " + W[chat.id]);
 		updateStrangerWisdom();
 		
 		if(chat.id != preChatId)
@@ -116,16 +116,16 @@ public class Player implements wtr.sim.Player {
 		if (wiser || (friendSet.contains(chat.id) && W[chat.id] > 0)) {
 			if(!wiser && interfereCount >= (W[chat.id] > cur_stranger_wisdom ? interfereThreshold : 0)){
 				//If two friends has been interfered more than 5 times, then move away
-//				System.out.println("RANDMOVE");
+				System.out.println("RANDMOVE");
 				return randomMoveInRoom(self);
 			}else{
 				preChatId = chat.id;
-//				System.out.println("DIST: "+distance(self, chat));
+				System.out.println("DIST: "+distance(self, chat));
 				if(distance(self, chat) > 0.6) {
 					Point ret = getCloserWithID(self, chat, self.id);
 					return ret;
 				}
-//				System.out.println("CONTINUE CHAT");
+				System.out.println("CONTINUE CHAT");
 				return new Point(0.0, 0.0, chat.id);
 			}
 		}
@@ -145,7 +145,7 @@ public class Player implements wtr.sim.Player {
 					return getCloser(selfPlayer, maxWisdomTarget);
 				}
 			} else {
-//				System.out.println("CHATCLOSEST");
+				System.out.println("CHATCLOSEST");
 				return closestTarget;
 			}
 
@@ -159,7 +159,7 @@ public class Player implements wtr.sim.Player {
 		while(move.x + current.x > 20 || move.y + current.y > 20 || move.x + current.x < 0 || move.y + current.y < 0) {
 			move = randomMove();
 		}
-		// System.out.println("Self " + self_id + " Moving");
+		 System.out.println("Self " + self_id + " Moving");
 		return move;
 	}
 
@@ -217,7 +217,7 @@ public class Player implements wtr.sim.Player {
 			if (players[i].id != chat_ids[i])
 				continue;
 			// swap with maxWisdom and maxTarget if wiser
-			// System.out.println("this wisdom: " + W[players[i].id]);
+			 System.out.println("this wisdom: " + W[players[i].id]);
 			if (W[players[i].id] > maxWisdom) {
 
 				maxWisdom = W[players[i].id];
@@ -257,7 +257,7 @@ public class Player implements wtr.sim.Player {
 		return Math.sqrt(dx * dx + dy * dy);
 	}
 	public static void debug(String str){
-//		System.out.println(str);
+		System.out.println(str);
 	}
 
 }
