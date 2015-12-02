@@ -20,7 +20,8 @@ public class Player implements wtr.sim.Player {
 
 	private HashSet<Integer> friendSet;
 
-	private int interfereThreshold = 7;
+	private int interfereThreshold = 5;
+	private int nTurnsMaxWait = 6;
 
 	private int interfereCount = 0;
 	private Integer preChatId;
@@ -97,7 +98,9 @@ public class Player implements wtr.sim.Player {
 		Point self = players[i];
 		Point chat = players[j];
 		
-		if(waitingForTarget && ++nTurnsWaited <= 6) {
+		boolean sabotaged = false;
+		
+		if(waitingForTarget && ++nTurnsWaited <= nTurnsMaxWait) {
 			int targetID = target.id;
 			int targetIndex = 0;
 			while(targetIndex < players.length && players[targetIndex].id != targetID) ++targetIndex;
@@ -113,8 +116,9 @@ public class Player implements wtr.sim.Player {
 				waitingForTarget = false;
 				target = null;
 				nTurnsWaited = 0;
-				debugNoNewline("SUCCESSFUL SABOTAGE");
-			}			
+				debugNoNewline("SUCCESSFUL SABOTAGE: "+i+", "+j);
+				sabotaged = true;
+			}
 			
 			else if(distance(self, players[targetIndex]) <= .6){
 				debug("WAITING FOR TARGET");
@@ -169,12 +173,12 @@ public class Player implements wtr.sim.Player {
 			debugNoNewline("INTERFERED");
 			interfereCount++;
 		}
-		if (wiser || (friendSet.contains(chat.id) && W[chat.id] > 0)) {
+		if (sabotaged || wiser || (friendSet.contains(chat.id) && W[chat.id] > 0)) {
 			if(!wiser && interfereCount >= (W[chat.id] > cur_stranger_wisdom ? interfereThreshold : 0)){
 				//If two friends has been interfered more than 5 times, then move away
 				debug("RANDMOVE");
 				return randomMoveInRoom(self);
-			}else{
+			} else{
 				preChatId = chat.id;
 				System.out.println("DIST: "+distance(self, chat));
 				if(distance(self, chat) > 0.6) {
@@ -296,7 +300,7 @@ public class Player implements wtr.sim.Player {
 	}
 
 	public Point getCloser(Point self, Point target){
-		debug("get closer");
+//		debug("get closer");
 		//can't set to 0.5, if 0.5 the result distance may be 0.49
 		double targetDis = 0.52;
 		double dis = distance(self, target);
@@ -323,12 +327,12 @@ public class Player implements wtr.sim.Player {
 	}
 	
 	public void debug(String str){
-		po.println(str);
+		po.println(tick+"\t"+str);
 		if(tick%100 == 0) po.flush();
 	}
 	
 	public void debugNoNewline(String str) {
-		po.print(str+"\t");
+		po.print(tick+"\t"+str+"\t");
 	}
 
 }
