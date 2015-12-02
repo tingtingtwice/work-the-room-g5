@@ -127,14 +127,18 @@ class Simulator {
 		for (String group : group_set) {
 			int min_group_score = max_score + 1;
 			int max_group_score = 0;
+			int sum_group_score = 0;
 			for (int j = 0 ; j != group_instances ; ++j, ++i) {
+				sum_group_score += score[i];
 				if (max_group_score < score[i])
 					max_group_score = score[i];
 				if (min_group_score > score[i])
 					min_group_score = score[i];
+				
 			}
 			System.err.println("Group " + group + ": [" + min_group_score +
-			                   ", " + max_group_score + "]");
+			                   ", " + max_group_score +
+			                   ", " + ((1.0) * sum_group_score / ((1.0) * group_instances)) + "]");
 		}
 		System.exit(0);
 	}
