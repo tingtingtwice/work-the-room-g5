@@ -46,7 +46,8 @@ public class Player implements wtr.sim.Player {
 		nTurnsWaited = 0;
 		self_id = id;
 		try {
-			po = new PrintWriter(new File(id+"_debug.txt"));
+			po = null;
+			//po = new PrintWriter(new File(id+"_debug.txt"));
 		} catch (Exception e) {
 			po = null;
 		}
@@ -327,12 +328,12 @@ public class Player implements wtr.sim.Player {
 	}
 	
 	public void debug(String str){
-		po.println(tick+"\t"+str);
-		if(tick%100 == 0) po.flush();
+		//po.println(tick+"\t"+str);
+		//if(tick%100 == 0) po.flush();
 	}
 	
 	public void debugNoNewline(String str) {
-		po.print(tick+"\t"+str+"\t");
+		//po.print(tick+"\t"+str+"\t");
 	}
 
 }
