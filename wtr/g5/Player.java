@@ -72,7 +72,7 @@ public class Player implements wtr.sim.Player {
 		soulmateID = -1;
 	}
 	public void updateStrangerWisdom(){
-		
+		System.out.println("cur_stranger_wisdom: " + cur_stranger_wisdom);
 		cur_stranger_wisdom = (int) (strangerUnknowWisdom / numberOfStrangers);
 		for(int i = 0; i < totalNumber; i++){
 			if(friendSet.contains(i) || alreadyTalkedStrangers.contains(i) || i == self_id)
@@ -319,6 +319,12 @@ public class Player implements wtr.sim.Player {
 		double dis = distance(self, target);
 		double x = (dis - targetDis) * (target.x - self.x) / dis;
 		double y = (dis - targetDis) * (target.y - self.y) / dis;
+		return new Point(x, y, id);
+	}
+	
+	public Point counterPositionMove(Point self, Point target, int id){
+		double x = 2 * (target.x - self.x);
+		double y = 2 * (target.y - self.y);
 		return new Point(x, y, id);
 	}
 	
