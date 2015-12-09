@@ -196,12 +196,7 @@ public class Player implements wtr.sim.Player {
 				debug("RANDMOVE");
 				return randomMoveInRoom(self);
 			} else if(!wiser && interfereCount > 2){
-				Point ret = counterPositionMove(players, self, chat, chat.id);
-				if(ret != null)
-						return ret;
-				else {
-					return new Point(0.0, 0.0, chat.id);
-				}
+				return counterPositionMove(players, self, chat, chat.id);	
 			} 
 			else{
 				preChatId = chat.id;
@@ -406,13 +401,32 @@ public class Player implements wtr.sim.Player {
 				return null;
 			}
 		}
-		double x = 2 * (target.x - self.x);
-		double y = 2 * (target.y - self.y);
+		Point curChoicePoint;
+		Point selfNewPoint;
+		int threshold = 10;
+		int count = 0; 
+		do{
+			count ++;
+			curChoicePoint = randomMoveInRoomInRange(target, 0.51);
+			selfNewPoint = new Point(curChoicePoint.x + target.x, curChoicePoint.y + target.y, self_id);
+		}while(hasInterferer(players, selfNewPoint, target) && count < threshold);
+		double x = target.x + curChoicePoint.x - self.x;
+		double y = target.y + curChoicePoint.y - self.y;
 		Point debugPoint = new Point(x + self.x, y + self.y, 0);
 		System.out.println("new location " + self_id + " x: " + (x + self.x) + " y: " + (y + self.y) + " distance " + distance(debugPoint, target));
 		return new Point(x, y, id);
 	}
-	
+	public boolean hasInterferer(Point[] players, Point self, Point target){
+//		System.out.println("has Interferer");
+		for(Point player: players){
+			if(player.id == self_id || player.id == target.id){
+				continue;
+			}
+			if(distance(player, target) <= distance(self, target))
+				return true;
+		}
+		return false;
+	}
 	public void debug(String str){
 //		po.println(tick+"\t"+str);
 //		if(tick%100 == 0) po.flush();
