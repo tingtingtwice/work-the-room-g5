@@ -21,7 +21,7 @@ public class Player implements wtr.sim.Player {
 	private HashSet<Integer> friendSet;
 
 	private int interfereThreshold = 5;
-	private int nTurnsMaxWait = 6;
+	private int nTurnsMaxWait = 3;
 
 	private int interfereCount = 0;
 	private Integer preChatId;
@@ -37,6 +37,7 @@ public class Player implements wtr.sim.Player {
 	int nTurnsWaited;
 	Point target;
 	int tick = 0;
+	boolean destructive;
 	
 	// init function called once
 	public void init(int id, int[] friend_ids, int strangers)
@@ -45,9 +46,10 @@ public class Player implements wtr.sim.Player {
 		waitingForTarget = false;
 		nTurnsWaited = 0;
 		self_id = id;
+		destructive = true;
 		try {
 			po = null;
-			//po = new PrintWriter(new File(id+"_debug.txt"));
+			po = new PrintWriter(new File(id+"_debug.txt"));
 		} catch (Exception e) {
 			po = null;
 		}
@@ -101,7 +103,7 @@ public class Player implements wtr.sim.Player {
 		
 		boolean sabotaged = false;
 		
-		if(waitingForTarget && ++nTurnsWaited <= nTurnsMaxWait) {
+		if(destructive && waitingForTarget && ++nTurnsWaited <= nTurnsMaxWait) {
 			int targetID = target.id;
 			int targetIndex = 0;
 			while(targetIndex < players.length && players[targetIndex].id != targetID) ++targetIndex;
@@ -132,7 +134,7 @@ public class Player implements wtr.sim.Player {
 				target = null;
 				nTurnsWaited = 0;
 			}
-		} else if (nTurnsWaited > 6) {
+		} else if (destructive && nTurnsWaited > 6) {
 			debugNoNewline("TARGET ENGAGED MORE THAN 6 TURNS");
 			waitingForTarget = false;
 			target = null;
@@ -177,6 +179,10 @@ public class Player implements wtr.sim.Player {
 		if (sabotaged || wiser || (friendSet.contains(chat.id) && W[chat.id] > 0)) {
 			if(!wiser && interfereCount >= (W[chat.id] > cur_stranger_wisdom ? interfereThreshold : 0)){
 				//If two friends has been interfered more than 5 times, then move away
+				if(chat.id == soulmateID) {
+					debug("WAIT LONGER FOR SOULMATE");
+					return new Point(0.0, 0.0, chat.id);
+				}
 				debug("RANDMOVE");
 				return randomMoveInRoom(self);
 			} else{
@@ -195,8 +201,7 @@ public class Player implements wtr.sim.Player {
 		if (i == j){
 			Point closestTarget = pickTarget1(players, chat_ids);
 			if (closestTarget == null) {
-
-				Point maxWisdomTarget = pickTarget2(players, 6, chat_ids);
+				Point maxWisdomTarget = pickTarget2_checkDestructive(players, 6, chat_ids);
 				if (maxWisdomTarget == null) {
 //					System.out.println("no valid target.");
 					// jump to random position
@@ -272,7 +277,14 @@ public class Player implements wtr.sim.Player {
 		}
 		return null;
 	}
-	public Point pickTarget2(Point[] players, double distance, int[] chat_ids){
+	
+	public Point pickTarget2_checkDestructive(Point[] players, double distance, int[] chat_ids) {
+		if(destructive)
+			return pickTarget2_destructive(players, distance, chat_ids);
+		return pickTarget2_constructive(players, distance, chat_ids);
+	}
+	
+	public Point pickTarget2_constructive(Point[] players, double distance, int[] chat_ids) {
 		int maxWisdom = 0;
 		Point maxTarget = null;
 
@@ -291,31 +303,46 @@ public class Player implements wtr.sim.Player {
 					maxTarget = players[i];
 				}
 			}
-			// swap with maxWisdom and maxTarget if wiser
-			 //System.out.println("this wisdom: " + W[players[i].id]);
-			
-//			System.out.println("max wisdom: " + maxWisdom);
+		}
+
+
+		return maxTarget;
+	}
+	
+	public Point pickTarget2_destructive(Point[] players, double distance, int[] chat_ids){
+		int maxWisdom = 0;
+		Point maxTarget = null;
+
+		if (distance > 6.0) 
+			distance = 6.0;
+
+		for (int i = 0; i < players.length; i++){
+
+			// not conversing with anyone
+			if (players[i].id != chat_ids[i]) {
+				if (W[players[i].id] > maxWisdom) {
+
+					maxWisdom = W[players[i].id];
+					maxTarget = players[i];
+				}
+			} else
+				continue;
 		}
 
 
 		return maxTarget;
 	}
 
-	public Point getCloser(Point self, Point target){
-//		debug("get closer");
-		//can't set to 0.5, if 0.5 the result distance may be 0.49
-		double targetDis = 0.52;
+	public Point getCloser(Point self, Point target) {
+		double targetDis = 0.5000001;
 		double dis = distance(self, target);
 		double x = (dis - targetDis) * (target.x - self.x) / dis;
 		double y = (dis - targetDis) * (target.y - self.y) / dis;
-//		System.out.println("self pos: " + self.x + ", " + self.y);
-//		System.out.println("target pos: " + target.x + ", " + target.y);
-//		System.out.println("move pos: " + x + ", " + y);
 		return new Point(x, y, self_id);
 	}
 	
 	public Point getCloserWithID(Point self, Point target, int id) {
-		double targetDis = 0.6;
+		double targetDis = 0.5000001;
 		double dis = distance(self, target);
 		double x = (dis - targetDis) * (target.x - self.x) / dis;
 		double y = (dis - targetDis) * (target.y - self.y) / dis;
@@ -335,12 +362,12 @@ public class Player implements wtr.sim.Player {
 	}
 	
 	public void debug(String str){
-		//po.println(tick+"\t"+str);
-		//if(tick%100 == 0) po.flush();
+		po.println(tick+"\t"+str);
+		if(tick%100 == 0) po.flush();
 	}
 	
 	public void debugNoNewline(String str) {
-		//po.print(tick+"\t"+str+"\t");
+		po.print(tick+"\t"+str+"\t");
 	}
 
 }
