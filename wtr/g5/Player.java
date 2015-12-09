@@ -227,15 +227,15 @@ public class Player implements wtr.sim.Player {
 				} else {
 					// get closer to maxWisdomTarget
 //					System.out.println("GET CLOSER");
-					if(destructive) {
-						debug("GET CLOSER TO TARGET FOR DESTRUCTION");
-						waitingForTarget = true;
-						nTurnsWaited = 0;
-						target = maxWisdomTarget;
-					} else {
-						debug("GET CLOSER TO TARGET TO TALK");
-					}
-					return getCloser(selfPlayer, maxWisdomTarget);
+					debug("GET CLOSER TO ENGAGED TARGET");
+					waitingForTarget = true;
+					nTurnsWaited = 0;
+					target = maxWisdomTarget;
+					// jump to the position that is 0.5m towards both interfere targets
+					if (destructive == true)
+						return getCloserDestructive(selfPlayer, maxWisdomTarget, players, chat_ids);
+					else
+						return getCloser(selfPlayer, maxWisdomTarget);
 				}
 			} else {
 				debug("START CHAT CLOSEST");
@@ -375,6 +375,41 @@ public class Player implements wtr.sim.Player {
 		double x = (dis - targetDis) * (target.x - self.x) / dis;
 		double y = (dis - targetDis) * (target.y - self.y) / dis;
 		return new Point(x, y, self_id);
+	}
+	public Point getCloserDestructive(Point self, Point target, Point[] players, int[] chat_ids) {
+		int i = 0, j = 0;
+		while (players[i].id != target.id) i++;
+		while (j < players.length && players[j].id != chat_ids[i]) j++;
+
+		// target's chat partner is either not visible or target is not conversing
+		if (j == players.length ||  target.id == j) {
+			return getCloser(self, target);
+		} else {
+			// target is chating with someone more than 0.5m away. Do regular get closer.
+			Point targetChatMate = players[j];
+			if(distance(target, targetChatMate) > 0.5001) return getCloser(self, target);
+			else return getInterferencePoint(target, targetChatMate);
+	
+		}
+	}
+	public Point getInterferencePoint(Point p1, Point p2) {
+		double delta_x = Math.abs(p1.x - p2.x);
+		double delta_y = Math.abs(p1.y - p2.y);
+
+		double a = 0.5 * distance(p1, p2);
+		double theta1 = Math.acos(a / 0.5);
+		double theta2 = Math.atan(delta_y / delta_x);
+
+		double x = p1.x + Math.cos(theta1 + theta2) * 0.5;
+		double y = p1.y + Math.sin(theta1 + theta2) * 0.5;
+		if (x < 20 && x > 0 && y < 20 && y > 0){
+			Point newP = new Point(x, y, self_id);
+			// System.out.println(distance(p1, newP) + ", " + distance(p2, newP));
+			return newP;
+		} else {
+			return getCloser(p1, p2);
+		}
+			
 	}
 	
 	public Point getCloserWithID(Point self, Point target, int id) {
