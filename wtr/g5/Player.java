@@ -195,7 +195,7 @@ public class Player implements wtr.sim.Player {
 				}
 				debug("RANDMOVE");
 				return randomMoveInRoom(self);
-			} else if(interfereCount > 0){
+			} else if(!wiser && interfereCount > 2){
 				Point ret = counterPositionMove(players, self, chat, chat.id);
 				if(ret != null)
 						return ret;
