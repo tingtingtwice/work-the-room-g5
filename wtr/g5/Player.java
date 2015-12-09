@@ -22,6 +22,7 @@ public class Player implements wtr.sim.Player {
 
 	private int interfereThreshold = 5;
 	private int nTurnsMaxWait = 3;
+	private int nTurnsSinceConversationBeforeRandmove = 2;
 
 	private int interfereCount = 0;
 	private Integer preChatId;
@@ -38,6 +39,7 @@ public class Player implements wtr.sim.Player {
 	Point target;
 	int tick = 0;
 	boolean destructive;
+	private int nTurnsSinceLastConversation;
 	
 	// init function called once
 	public void init(int id, int[] friend_ids, int strangers)
@@ -46,7 +48,8 @@ public class Player implements wtr.sim.Player {
 		waitingForTarget = false;
 		nTurnsWaited = 0;
 		self_id = id;
-		destructive = true;
+		destructive = false;
+		nTurnsSinceLastConversation = 0;
 		try {
 			po = null;
 			po = new PrintWriter(new File(id+"_debug.txt"));
@@ -73,8 +76,8 @@ public class Player implements wtr.sim.Player {
 		numberOfStrangers = strangers + 1;
 		soulmateID = -1;
 	}
-	public void updateStrangerWisdom(){
-		
+	
+	public void updateStrangerWisdom(){	
 		cur_stranger_wisdom = (int) (strangerUnknowWisdom / numberOfStrangers);
 		for(int i = 0; i < totalNumber; i++){
 			if(friendSet.contains(i) || alreadyTalkedStrangers.contains(i) || i == self_id)
@@ -97,6 +100,12 @@ public class Player implements wtr.sim.Player {
 		while (players[j].id != chat_ids[i]) j++;
 		
 		boolean conversedLastTurn = j != i;
+		
+		if(conversedLastTurn) {
+			nTurnsSinceLastConversation = 0;
+		} else {
+			++nTurnsSinceLastConversation;
+		}
 
 		Point self = players[i];
 		Point chat = players[j];
@@ -124,6 +133,7 @@ public class Player implements wtr.sim.Player {
 			}
 			
 			else if(distance(self, players[targetIndex]) <= .6){
+				--nTurnsSinceLastConversation;
 				debug("WAITING FOR TARGET");
 				return new Point(0,0,targetID);
 			}
@@ -185,7 +195,15 @@ public class Player implements wtr.sim.Player {
 				}
 				debug("RANDMOVE");
 				return randomMoveInRoom(self);
-			} else{
+			} else if(!wiser && interfereCount > 2){
+				Point ret = counterPositionMove(players, self, chat, chat.id);
+				if(ret != null)
+						return ret;
+				else {
+					return new Point(0.0, 0.0, chat.id);
+				}
+			} 
+			else{
 				preChatId = chat.id;
 				System.out.println("DIST: "+distance(self, chat));
 				if(distance(self, chat) > 0.6) {
@@ -201,6 +219,10 @@ public class Player implements wtr.sim.Player {
 		if (i == j){
 			Point closestTarget = pickTarget1(players, chat_ids);
 			if (closestTarget == null) {
+				if(nTurnsSinceLastConversation > nTurnsSinceConversationBeforeRandmove) {
+					debug("No productive move for " + nTurnsSinceConversationBeforeRandmove + " turns, doing CLOSE RANDMOVE");
+					return randomMoveInRoomInRange(self, 2);
+				}
 				Point maxWisdomTarget = pickTarget2_checkDestructive(players, 6, chat_ids);
 				if (maxWisdomTarget == null) {
 //					System.out.println("no valid target.");
@@ -230,13 +252,28 @@ public class Player implements wtr.sim.Player {
 		debug("no productive move RANDMOVE");
 		return randomMoveInRoom(self);
 	}
+	
+	public Point randomMoveInRoomInRange(Point current, double maxDist) {
+		Point move = randomMoveInRange(maxDist);
+		while(move.x + current.x > 20 || move.y + current.y > 20 || move.x + current.x < 0 || move.y + current.y < 0) {
+			move = randomMove();
+		}
+		return move;
+	}
+	
+	private Point randomMoveInRange(double maxDist) {
+		double dir = random.nextDouble() * 2 * Math.PI;
+		double dx = maxDist * Math.cos(dir);
+		double dy = maxDist * Math.sin(dir);
+		preChatId = self_id;
+		return new Point(dx, dy, self_id);
+	}
 
 	public Point randomMoveInRoom(Point current) {
 		Point move = randomMove();
 		while(move.x + current.x > 20 || move.y + current.y > 20 || move.x + current.x < 0 || move.y + current.y < 0) {
 			move = randomMove();
 		}
-		// System.out.println("Self " + self_id + " Moving");
 		return move;
 	}
 
@@ -394,13 +431,30 @@ public class Player implements wtr.sim.Player {
 		return Math.sqrt(dx * dx + dy * dy);
 	}
 	
+	public Point counterPositionMove(Point[] players, Point self, Point target, int id){
+		System.out.println("previous location id: + " + self_id + " x: " + self.x + " y : " + self.y + " target: x: " 
+	+ target.x + " y : " + target.y);
+		for(Point curPlayer : players){
+			if(curPlayer.id == self_id || curPlayer.id == target.id)
+				continue;
+			if(distance(curPlayer, self) < 0.5 && distance(curPlayer, target) < 0.5){
+				return null;
+			}
+		}
+		double x = 2 * (target.x - self.x);
+		double y = 2 * (target.y - self.y);
+		Point debugPoint = new Point(x + self.x, y + self.y, 0);
+		System.out.println("new location " + self_id + " x: " + (x + self.x) + " y: " + (y + self.y) + " distance " + distance(debugPoint, target));
+		return new Point(x, y, id);
+	}
+	
 	public void debug(String str){
-		po.println(tick+"\t"+str);
-		if(tick%100 == 0) po.flush();
+//		po.println(tick+"\t"+str);
+//		if(tick%100 == 0) po.flush();
 	}
 	
 	public void debugNoNewline(String str) {
-		po.print(tick+"\t"+str+"\t");
+//		po.print(tick+"\t"+str+"\t");
 	}
 
 }
