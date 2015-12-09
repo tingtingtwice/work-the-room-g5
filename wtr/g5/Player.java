@@ -255,8 +255,8 @@ public class Player implements wtr.sim.Player {
 	
 	private Point randomMoveInRange(double maxDist) {
 		double dir = random.nextDouble() * 2 * Math.PI;
-		double dx = 6 * Math.cos(dir);
-		double dy = 6 * Math.sin(dir);
+		double dx = maxDist * Math.cos(dir);
+		double dy = maxDist * Math.sin(dir);
 		preChatId = self_id;
 		return new Point(dx, dy, self_id);
 	}
