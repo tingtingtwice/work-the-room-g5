@@ -195,7 +195,15 @@ public class Player implements wtr.sim.Player {
 				}
 				debug("RANDMOVE");
 				return randomMoveInRoom(self);
-			} else{
+			} else if(interfereCount > 0){
+				Point ret = counterPositionMove(players, self, chat, chat.id);
+				if(ret != null)
+						return ret;
+				else {
+					return new Point(0.0, 0.0, chat.id);
+				}
+			} 
+			else{
 				preChatId = chat.id;
 				System.out.println("DIST: "+distance(self, chat));
 				if(distance(self, chat) > 0.6) {
@@ -388,13 +396,30 @@ public class Player implements wtr.sim.Player {
 		return Math.sqrt(dx * dx + dy * dy);
 	}
 	
+	public Point counterPositionMove(Point[] players, Point self, Point target, int id){
+		System.out.println("previous location id: + " + self_id + " x: " + self.x + " y : " + self.y + " target: x: " 
+	+ target.x + " y : " + target.y);
+		for(Point curPlayer : players){
+			if(curPlayer.id == self_id || curPlayer.id == target.id)
+				continue;
+			if(distance(curPlayer, self) < 0.5 && distance(curPlayer, target) < 0.5){
+				return null;
+			}
+		}
+		double x = 2 * (target.x - self.x);
+		double y = 2 * (target.y - self.y);
+		Point debugPoint = new Point(x + self.x, y + self.y, 0);
+		System.out.println("new location " + self_id + " x: " + (x + self.x) + " y: " + (y + self.y) + " distance " + distance(debugPoint, target));
+		return new Point(x, y, id);
+	}
+	
 	public void debug(String str){
-		po.println(tick+"\t"+str);
-		if(tick%100 == 0) po.flush();
+//		po.println(tick+"\t"+str);
+//		if(tick%100 == 0) po.flush();
 	}
 	
 	public void debugNoNewline(String str) {
-		po.print(tick+"\t"+str+"\t");
+//		po.print(tick+"\t"+str+"\t");
 	}
 
 }
